@@ -19,6 +19,16 @@ void g_mat_mul( int *a, int *b, int *c, int m){
   //printf("\nValue for C at thread %d is %d\n", index, c[index]);
 }
 
+__global__
+void gpu_transpose(int *mat, int *res, int m){
+  int index = blockIdx.x * blockDim.x + threadIdx.x;
+
+  int row = index/m;
+  int col = index%m;
+
+  res[col*m + row] = mat[index];
+}
+
 void cpu_matrix_mul(int *a, int *b, int *c, int m){
   for( int i = 0; i < m; i++){
     for( int j=0; j < m; j++){
@@ -90,11 +100,16 @@ int main(void){
   cudaFree(device_a);
   cudaFree(device_b);
   cudaFree(device_c);
-
+    
+  int *res;
+  cudaMallocManaged(&res, sizeof(int)*size);
   cudaEventRecord(start,0);
-  cpu_matrix_mul(a,b,c,m);
+  //cpu_matrix_mul(a,b,c,m);
+  gpu_transpose<<<m,m>>>(
+        device_a, res, m  
+  );
   cudaEventRecord(stop,0);
   cudaEventSynchronize(stop);
   cudaEventElapsedTime(&cpu_elapsed_time, start, stop);
-  printf("\nTime elapsed on matrix multiplication on CPU: %f ms.\n\n", cpu_elapsed_time);
+  printf("\nTime elapsed on matrix transpose on GPU: %f ms.\n\n", cpu_elapsed_time);
 }
